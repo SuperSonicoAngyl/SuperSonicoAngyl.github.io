@@ -1,6 +1,5 @@
 body {
     background: #ffa1db;
-    color: rgb(45, 45, 45);
     padding: 10px;
     font-family: Arial, sans-serif;
 }
@@ -77,3 +76,4 @@ main {
 h2, h3 {
     margin: 0px;
 }
+
