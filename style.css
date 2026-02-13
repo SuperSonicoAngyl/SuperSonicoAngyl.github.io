@@ -69,7 +69,7 @@ a {
 
 /* main container area beneath menu */
 main {
-  background: hsl(59, 100%, 89%);
+  background: #fffec7;
   display: flex;
   gap: 24px;
   align-items: center; /* vertically center content beside image */
