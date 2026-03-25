@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pastel Photo Slideshow</title>
+<style>
+  /* Page background with a soft pastel gradient */
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #FFD1DC, #B3E5FC, #FFF9C4);
+    background-attachment: fixed;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+  }
+
+  h2 {
+    color: #555;
+    text-shadow: 1px 1px white;
+    margin-bottom: 20px;
+  }
+
+  /* The main container */
+  .slideshow-container {
+    max-width: 700px;
+    width: 90%;
+    position: relative;
+    background: white;
+    padding: 15px;
+    border-radius: 25px; /* Rounded "bubbly" corners */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border: 8px solid #FFF9C4; /* Pastel Yellow Border */
+  }
+
+  /* Slide styling */
+  .mySlides {
+    display: none;
+    border-radius: 15px;
+    overflow: hidden;
+  }
+
+  .mySlides img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 10px;
+  }
+
+  /* Navigation buttons */
+  .prev, .next {
+    cursor: pointer;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: auto;
+    padding: 15px;
+    color: #888;
+    font-weight: bold;
+    font-size: 24px;
+    transition: 0.3s;
+    user-select: none;
+    text-decoration: none;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    line-height: 1;
+    margin: 0 10px;
+  }
+
+  .next { right: 0; }
+  .prev { left: 0; }
+
+  /* Hover effect using Pastel Blue and Pink */
+  .prev:hover {
+    background-color: #B3E5FC; /* Pastel Blue */
+    color: white;
+  }
+
+  .next:hover {
+    background-color: #FFD1DC; /* Pastel Pink */
+    color: white;
+  }
+
+  /* Simple fade effect */
+  .fade {
+    animation: fadeAnim 0.8s;
+  }
+
+  @keyframes fadeAnim {
+    from {opacity: 0.6} 
+    to {opacity: 1}
+  }
+
+</style>
+</head>
+<body>
+
+<h2>My Photo Gallery</h2>
+
+<div class="slideshow-container">
+
+  <div class="mySlides fade"><img src="assets/1 Line.JPG" alt="Slide 1"></div>
+  <div class="mySlides fade"><img src="assets/2 Contrast.JPG" alt="Slide 2"></div>
+  <div class="mySlides fade"><img src="assets/8 Symbol.JPG" alt="Slide 3"></div>
+  <div class="mySlides fade"><img src="assets/10 CHS.JPG" alt="Slide 4"></div>
+  <div class="mySlides fade"><img src="assets/ant.JPG" alt="Slide 5"></div>
+  <div class="mySlides fade"><img src="assets/beauty.JPG" alt="Slide 6"></div>
+  <div class="mySlides fade"><img src="assets/shape.JPG" alt="Slide 7"></div>
+  <div class="mySlides fade"><img src="assets/spirit.JPG" alt="Slide 8"></div>
+  <div class="mySlides fade"><img src="assets/texture.JPG" alt="Slide 9"></div>
+  <div class="mySlides fade"><img src="assets/third.JPG" alt="Slide 10"></div>
+
+
+  <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+  <a class="next" onclick="plusSlides(1)">&#10095;</a>
+
+</div>
+
+<script>
+  let slideIndex = 1;
+  showSlides(slideIndex);
+
+  function plusSlides(n) {
+    showSlides(slideIndex += n);
+  }
+
+  function showSlides(n) {
+    let i;
+    let slides = document.getElementsByClassName("mySlides");
+    if (n > slides.length) {slideIndex = 1}    
+    if (n < 1) {slideIndex = slides.length}
+    for (i = 0; i < slides.length; i++) {
+      slides[i].style.display = "none";  
+    }
+    slides[slideIndex-1].style.display = "block";  
+  }
+</script>
+
+</body>
+</html>
