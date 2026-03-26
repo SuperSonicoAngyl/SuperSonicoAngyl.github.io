@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Streamlined DAW v7 - Save & Storage Edition</title>
+    <style>
+        :root { --bg: #0a0a0b; --panel: #161618; --track: #1e1e20; --accent: #00f2ff; --border: #333; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #ececec; margin: 0; padding: 20px; overflow-x: hidden; }
+        
+        header { 
+            background: var(--panel); padding: 12px 20px; border-radius: 12px; 
+            display: flex; gap: 15px; align-items: center; margin-bottom: 10px;
+            border: 1px solid var(--border); position: sticky; top: 10px; z-index: 100; flex-wrap: wrap;
+        }
+
+        .transport-btn { padding: 8px 16px; border-radius: 6px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        #play { background: #00ff88; color: #000; }
+        #stop { background: #ff4d4d; color: #fff; }
+
+        .system-btn { background: #4d4dff; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .system-btn:hover { background: #6666ff; }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { background: #222; border: 1px solid #444; color: #aaa; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .tab-btn.active { background: var(--accent); color: #000; font-weight: bold; border-color: var(--accent); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Arranger & Sequencer */
+        #arranger { background: var(--panel); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--border); overflow-x: auto; }
+        .arranger-header, .pattern-header { display: flex; gap: 15px; margin-bottom: 10px; align-items: center; }
+        .pattern-header { background: var(--panel); padding: 10px 15px; border-radius: 10px; border: 1px solid var(--border); }
+        .playlist-row { display: flex; gap: 4px; margin-bottom: 4px; align-items: center; }
+        .playlist-label { width: 80px; font-size: 12px; color: #888; font-weight: bold; }
+        .playlist-cell { height: 24px; flex: 1; min-width: 30px; background: #2a2a2c; border-radius: 3px; cursor: pointer; border: 1px solid transparent; }
+        .playlist-cell.header { background: transparent; color: #666; font-size: 10px; text-align: center; line-height: 24px; pointer-events: none; }
+        .playlist-cell.active { background: #4d4dff; border-color: #7a7aff; }
+        .playlist-cell.playing { border-color: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.6); }
+
+        .track { background: var(--track); padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; gap: 15px; border: 1px solid var(--border); }
+        .controls { width: 140px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid var(--border); padding-right: 15px; }
+        .grid-container { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; }
+        .row { display: flex; align-items: center; gap: 4px; }
+        .label { width: 45px; font-size: 10px; color: #888; text-align: right; padding-right: 8px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 3px; flex-grow: 1; }
+        .cell { height: 22px; background: #2a2a2c; cursor: pointer; border-radius: 3px; transition: background 0.1s; border: 1px solid transparent; }
+        .cell:nth-child(4n) { border-right-color: #555; }
+        
+        .cell.active { background: var(--accent); box-shadow: 0 0 10px rgba(0, 242, 255, 0.4); display: flex; align-items: center; justify-content: center; color: #000; font-size: 10px; font-weight: bold; }
+        .cell.playing { background: #fff !important; transform: scaleY(1.1); }
+
+        /* Mixer & Synth UI */
+        .mixer-container { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; }
+        .mixer-strip { background: var(--panel); border: 1px solid var(--border); padding: 15px; border-radius: 8px; width: 80px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .mixer-strip input[type="range"] { writing-mode: vertical-lr; direction: rtl; height: 100px; width: 20px; }
+        .knob-container { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #888; }
+        .knob-container input { width: 40px; }
+        
+        .synth-editor { background: var(--panel); padding: 20px; border-radius: 10px; border: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .synth-module { background: #111; padding: 15px; border-radius: 8px; border: 1px solid #222; }
+
+        select, input[type="number"], input[type="text"] { background: #222; color: #fff; border: 1px solid #444; padding: 5px; border-radius: 4px; outline: none; }
+        button { background: #333; color: #fff; border: 1px solid #555; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #444; }
+    </style>
+</head>
+<body>
+
+<header>
+    <button id="play" class="transport-btn">PLAY</button>
+    <button id="stop" class="transport-btn">STOP</button>
+    <select id="mode-select" onchange="playMode = this.value">
+        <option value="pattern">Pattern Mode</option>
+        <option value="song">Song Mode</option>
+    </select>
+    <div style="font-size: 12px; margin-left: 10px;">BPM <input type="number" id="bpm" value="120" style="width: 50px;"></div>
+    
+    <div style="margin-left: auto; display: flex; gap: 10px;">
+        <button class="system-btn" onclick="saveSong()">💾 Save Song</button>
+        <button class="system-btn" onclick="loadSong()">📂 Load Song</button>
+    </div>
+    
+    <div style="margin-left:20px; display: flex; gap: 10px;">
+        <button onclick="addTrack('synth', true)">+ Synth</button>
+        <button onclick="addTrack('drums', true)">+ Drums</button>
+    </div>
+</header>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-sequencer')">Sequencer</button>
+    <button class="tab-btn" onclick="switchTab('tab-synth'); renderSynthEditor();">Synth Editor</button>
+    <button class="tab-btn" onclick="switchTab('tab-mixer'); renderMixer();">Mixer</button>
+</div>
+
+<div id="tab-sequencer" class="tab-content active">
+    <div id="arranger">
+        <div class="arranger-header">
+            <button onclick="addPattern()">+ New Pattern</button>
+            <span style="font-size: 12px; color: #888; margin-left: 10px;">Playlist Arranger</span>
+        </div>
+        <div id="playlist-grid"></div>
+    </div>
+
+    <div class="pattern-header">
+        <span style="font-size: 12px; color: #888;">Channel Rack</span>
+        <select id="pattern-select" onchange="selectPattern(this.value)"></select>
+    </div>
+    <div id="workspace"></div>
+</div>
+
+<div id="tab-synth" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin:0;">Mini-Synth Engine</h3>
+        <button class="system-btn" onclick="saveCustomPreset()">💾 Save as Custom Preset</button>
+    </div>
+    <div style="margin-bottom: 15px;">
+        Target Track: <select id="synth-track-select" onchange="renderSynthEditor()"></select>
+    </div>
+    <div id="synth-ui"></div>
+</div>
+
+<div id="tab-mixer" class="tab-content">
+    <h3 style="margin-top:0;">Master Mixer & FX</h3>
+    <div class="mixer-container" id="mixer-ui"></div>
+</div>
+
+<script>
+let audioCtx;
+let masterGain, delayNode, delayFeedback;
+let isPlaying = false;
+let globalStep = 0;
+let nextNoteTime = 0.0;
+let timerID;
+
+let tracks = [];
+let patterns = [];
+let currentPattern = 0;
+let playMode = 'pattern';
+const numBars = 16;
+
+const scale = [
+    {n:'C5', f:523.25}, {n:'B4', f:493.88}, {n:'A#4', f:466.16}, {n:'A4', f:440.00},
+    {n:'G4', f:392.00}, {n:'F4', f:349.23}, {n:'E4', f:329.63}, {n:'D4', f:293.66}, {n:'C4', f:261.63}
+];
+
+const drumDefs = [
+    {n:'Crash', id:'crash'}, {n:'H-Hat', id:'hat'}, {n:'Clap', id:'clap'}, 
+    {n:'Snare', id:'snare'}, {n:'Tom', id:'tom'}, {n:'Kick', id:'kick'}
+];
+
+// Default presets + load custom presets from storage
+let presets = {
+    'lead': {type:'sawtooth', a:0.01, r:0.3, oct: 1, cutoff: 5000},
+    'pad': {type:'sine', a:0.4, r:1.2, oct: 1, cutoff: 1000},
+    'bass': {type:'square', a:0.02, r:0.2, oct: 0.25, cutoff: 800},
+    'pluck': {type:'triangle', a:0.005, r:0.1, oct: 2, cutoff: 3000}
+};
+if(localStorage.getItem('daw_presets')) {
+    presets = { ...presets, ...JSON.parse(localStorage.getItem('daw_presets')) };
+}
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        masterGain = audioCtx.createGain();
+        masterGain.connect(audioCtx.destination);
+        masterGain.gain.value = 0.8;
+
+        delayNode = audioCtx.createDelay();
+        delayNode.delayTime.value = 0.375; 
+        delayFeedback = audioCtx.createGain();
+        delayFeedback.gain.value = 0.4;
+        delayNode.connect(delayFeedback);
+        delayFeedback.connect(delayNode);
+        delayNode.connect(masterGain);
+    }
+}
+
+window.onload = () => addPattern();
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.target.classList.add('active');
+}
+
+function addPattern() {
+    const id = patterns.length;
+    const pat = { id, name: `Pattern ${id + 1}`, tracksData: {}, arrangerData: Array(numBars).fill(false) };
+    
+    tracks.forEach(t => pat.tracksData[t.id] = Array(t.mode === 'synth' ? scale.length : drumDefs.length).fill().map(() => Array(16).fill(0)));
+    patterns.push(pat);
+    
+    const sel = document.getElementById('pattern-select');
+    sel.innerHTML += `<option value="${id}">${pat.name}</option>`;
+    sel.value = id;
+    
+    selectPattern(id);
+    renderPlaylist();
+}
+
+function selectPattern(id) {
+    currentPattern = parseInt(id);
+    renderWorkspace();
+}
+
+// Added 'isNew' flag to separate fresh track creation from loading
+function addTrack(mode, isNew = false, loadedData = null) {
+    initAudio();
+    const id = loadedData ? loadedData.id : Date.now();
+    
+    const trackGain = audioCtx.createGain();
+    const trackPan = audioCtx.createStereoPanner();
+    const trackDelaySend = audioCtx.createGain();
+
+    trackGain.connect(trackPan);
+    trackPan.connect(masterGain); 
+    trackPan.connect(trackDelaySend); 
+    trackDelaySend.connect(delayNode);
+
+    // Apply loaded mixer settings or defaults
+    trackGain.gain.value = loadedData ? loadedData.vol : 0.5;
+    trackPan.pan.value = loadedData ? loadedData.pan : 0;
+    trackDelaySend.gain.value = loadedData ? loadedData.fx : 0; 
+
+    const track = {
+        id, mode, name: loadedData ? loadedData.name : `${mode.toUpperCase()} ${tracks.length + 1}`,
+        gain: trackGain, pan: trackPan, fxSend: trackDelaySend,
+        synthParams: mode === 'synth' ? (loadedData ? loadedData.synthParams : { ...presets['lead'] }) : null
+    };
+    
+    tracks.push(track);
+    
+    if (isNew) {
+        patterns.forEach(p => p.tracksData[id] = Array(mode === 'synth' ? scale.length : drumDefs.length).fill().map(() => Array(16).fill(0)));
+    }
+    
+    updateSynthTrackDropdown();
+    renderWorkspace();
+    return track;
+}
+
+function loadPreset(tId, presetName) {
+    const track = tracks.find(t => t.id === tId);
+    track.synthParams = { ...presets[presetName] };
+    if(document.getElementById('synth-track-select').value == tId) renderSynthEditor();
+}
+
+// --- SAVE & LOAD SYSTEM ---
+
+function saveSong() {
+    const songData = {
+        bpm: document.getElementById('bpm').value,
+        patterns: patterns,
+        tracks: tracks.map(t => ({
+            id: t.id,
+            mode: t.mode,
+            name: t.name,
+            vol: t.gain.gain.value,
+            pan: t.pan.pan.value,
+            fx: t.fxSend.gain.value,
+            synthParams: t.synthParams
+        }))
+    };
+    localStorage.setItem('daw_song_save', JSON.stringify(songData));
+    alert("Song saved successfully to browser storage!");
+}
+
+function loadSong() {
+    const saved = localStorage.getItem('daw_song_save');
+    if(!saved) return alert("No saved song found!");
+    
+    if(isPlaying) document.getElementById('stop').click();
+    initAudio();
+    
+    const data = JSON.parse(saved);
+    
+    // Reset state
+    tracks = [];
+    document.getElementById('bpm').value = data.bpm;
+    
+    // Rebuild Tracks and audio nodes
+    data.tracks.forEach(tData => addTrack(tData.mode, false, tData));
+    
+    // Load Patterns
+    patterns = data.patterns;
+    
+    // Rebuild UI
+    const sel = document.getElementById('pattern-select');
+    sel.innerHTML = patterns.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    
+    selectPattern(0);
+    renderPlaylist();
+    updateSynthTrackDropdown();
+}
+
+function saveCustomPreset() {
+    const name = prompt("Enter a name for your custom preset:");
+    if(!name) return;
+    
+    const trackId = parseInt(document.getElementById('synth-track-select').value);
+    const track = tracks.find(t => t.id === trackId);
+    
+    if(!track || track.mode !== 'synth') return;
+    
+    // Save to active presets and local storage
+    presets[name] = { ...track.synthParams };
+    
+    const customPresets = JSON.parse(localStorage.getItem('daw_presets') || '{}');
+    customPresets[name] = { ...track.synthParams };
+    localStorage.setItem('daw_presets', JSON.stringify(customPresets));
+    
+    alert(`Preset "${name}" saved!`);
+    renderWorkspace(); // Updates dropdowns
+}
+
+// --- UI Rendering ---
+
+function renderPlaylist() {
+    const pGrid = document.getElementById('playlist-grid');
+    let html = '<div class="playlist-row"><div class="playlist-label">Bars</div>';
+    for(let b=0; b<numBars; b++) html += `<div class="playlist-cell header">${b+1}</div>`;
+    html += '</div>';
+
+    patterns.forEach(p => {
+        html += `<div class="playlist-row"><div class="playlist-label">${p.name}</div>`;
+        for(let b=0; b<numBars; b++) html += `<div class="playlist-cell ${p.arrangerData[b] ? 'active':''}" id="pcell-${p.id}-${b}" onclick="togglePlaylist(${p.id}, ${b})"></div>`;
+        html += `</div>`;
+    });
+    pGrid.innerHTML = html;
+}
+
+function togglePlaylist(pId, barIdx) {
+    patterns[pId].arrangerData[barIdx] = !patterns[pId].arrangerData[barIdx];
+    renderPlaylist();
+}
+
+function renderWorkspace() {
+    const ws = document.getElementById('workspace');
+    ws.innerHTML = '';
+    if(patterns.length === 0) return;
+    const currentPat = patterns[currentPattern];
+
+    tracks.forEach(track => {
+        const rows = track.mode === 'synth' ? scale : drumDefs;
+        const trackEl = document.createElement('div');
+        trackEl.className = 'track';
+        
+        let html = `<div class="controls">
+            <strong>${track.name}</strong>
+            ${track.mode === 'synth' ? `<select onchange="loadPreset(${track.id}, this.value)">
+                <option value="">-- Load Preset --</option>
+                ${Object.keys(presets).map(p=>`<option value="${p}">${p}</option>`).join('')}
+            </select><button onclick="switchTab('tab-synth'); document.getElementById('synth-track-select').value='${track.id}'; renderSynthEditor();" style="font-size:10px;">Edit Synth</button>` : ''}
+        </div><div class="grid-container">`;
+
+        rows.forEach((row, rIdx) => {
+            html += `<div class="row"><div class="label">${row.n}</div><div class="grid">`;
+            
+            let s = 0;
+            while(s < 16) {
+                let noteLength = currentPat.tracksData[track.id][rIdx][s];
+                if (noteLength > 0) {
+                    let visualSpan = Math.min(noteLength, 16 - s); 
+                    html += `<div class="cell active" style="grid-column: span ${visualSpan}" id="c-${track.id}-${rIdx}-${s}" onclick="toggleNote(${track.id},${rIdx},${s})">${noteLength > 1 ? noteLength : ''}</div>`;
+                    s += visualSpan; 
+                } else {
+                    html += `<div class="cell" id="c-${track.id}-${rIdx}-${s}" onclick="toggleNote(${track.id},${rIdx},${s})"></div>`;
+                    s++;
+                }
+            }
+            html += `</div></div>`;
+        });
+        trackEl.innerHTML = html + `</div>`;
+        ws.appendChild(trackEl);
+    });
+}
+
+function toggleNote(tId, r, s) {
+    const track = tracks.find(t => t.id === tId);
+    let current = patterns[currentPattern].tracksData[tId][r][s];
+    let next = 0;
+
+    if (track.mode === 'synth') {
+        next = current === 0 ? 1 : current === 1 ? 2 : current === 2 ? 4 : current === 4 ? 8 : 0;
+    } else {
+        next = current === 0 ? 1 : 0;
+    }
+
+    if (next > 1) {
+        for (let i = 1; i < next; i++) {
+            if (s + i < 16) patterns[currentPattern].tracksData[tId][r][s + i] = 0;
+        }
+    }
+    
+    patterns[currentPattern].tracksData[tId][r][s] = next;
+    renderWorkspace();
+}
+
+// --- Mixer & Synth UI Logic ---
+
+function renderMixer() {
+    const ui = document.getElementById('mixer-ui');
+    let html = '';
+    tracks.forEach(t => {
+        html += `<div class="mixer-strip">
+            <strong style="font-size:12px;text-align:center;">${t.name}</strong>
+            <div class="knob-container">Vol<input type="range" min="0" max="1" step="0.01" value="${t.gain.gain.value}" oninput="tracks.find(x=>x.id==${t.id}).gain.gain.value=this.value"></div>
+            <div class="knob-container">Pan<input type="range" min="-1" max="1" step="0.05" value="${t.pan.pan.value}" oninput="tracks.find(x=>x.id==${t.id}).pan.pan.value=this.value" style="height:auto;writing-mode:horizontal-tb;"></div>
+            <div class="knob-container">Delay<input type="range" min="0" max="1" step="0.05" value="${t.fxSend.gain.value}" oninput="tracks.find(x=>x.id==${t.id}).fxSend.gain.value=this.value" style="height:auto;writing-mode:horizontal-tb;"></div>
+        </div>`;
+    });
+    ui.innerHTML = html;
+}
+  
+function updateSynthTrackDropdown() {
+    const sel = document.getElementById('synth-track-select');
+    sel.innerHTML = tracks.filter(t => t.mode === 'synth').map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+}
+
+function renderSynthEditor() {
+    const ui = document.getElementById('synth-ui');
+    const trackId = parseInt(document.getElementById('synth-track-select').value);
+    const track = tracks.find(t => t.id === trackId);
+    
+    if(!track || track.mode !== 'synth') {
+        ui.innerHTML = '<p>No synth track selected.</p>';
+        return;
+    }
+
+    const p = track.synthParams;
+    ui.innerHTML = `
+        <div class="synth-module">
+            <h4>Oscillator</h4>
+            Wave: <select onchange="updateSynthParam(${track.id}, 'type', this.value)">
+                <option value="sawtooth" ${p.type==='sawtooth'?'selected':''}>Sawtooth</option>
+                <option value="square" ${p.type==='square'?'selected':''}>Square</option>
+                <option value="sine" ${p.type==='sine'?'selected':''}>Sine</option>
+                <option value="triangle" ${p.type==='triangle'?'selected':''}>Triangle</option>
+            </select><br><br>
+            Octave: <select onchange="updateSynthParam(${track.id}, 'oct', parseFloat(this.value))">
+                <option value="0.25" ${p.oct===0.25?'selected':''}>-2 Oct</option>
+                <option value="0.5" ${p.oct===0.5?'selected':''}>-1 Oct</option>
+                <option value="1" ${p.oct===1?'selected':''}>Normal</option>
+                <option value="2" ${p.oct===2?'selected':''}>+1 Oct</option>
+            </select>
+        </div>
+        <div class="synth-module">
+            <h4>Envelope & Filter</h4>
+            Attack: <input type="range" min="0.001" max="1" step="0.01" value="${p.a}" oninput="updateSynthParam(${track.id}, 'a', parseFloat(this.value))"><br>
+            Release: <input type="range" min="0.01" max="3" step="0.05" value="${p.r}" oninput="updateSynthParam(${track.id}, 'r', parseFloat(this.value))"><br>
+            Cutoff (Hz): <input type="range" min="100" max="10000" step="100" value="${p.cutoff}" oninput="updateSynthParam(${track.id}, 'cutoff', parseFloat(this.value))">
+        </div>
+    `;
+}
+
+function updateSynthParam(tId, param, val) {
+    tracks.find(t => t.id === tId).synthParams[param] = val;
+}
+
+// --- Audio Synthesis Engine ---
+
+function playDrum(type, time, gNode) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    if (type === 'kick') {
+        osc.frequency.setValueAtTime(150, time);
+        osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+        gain.gain.setValueAtTime(1, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+    } else if (type === 'tom') {
+        osc.frequency.setValueAtTime(200, time);
+        osc.frequency.exponentialRampToValueAtTime(50, time + 0.4);
+        gain.gain.setValueAtTime(0.8, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.4);
+    } else {
+        const noise = audioCtx.createBufferSource();
+        const bSize = audioCtx.sampleRate * (type === 'crash' ? 1.5 : 0.2);
+        const buffer = audioCtx.createBuffer(1, bSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bSize; i++) data[i] = Math.random() * 2 - 1;
+        noise.buffer = buffer;
+        
+        const filter = audioCtx.createBiquadFilter();
+        if(type === 'hat') { filter.type = 'highpass'; filter.frequency.value = 8000; gain.gain.setValueAtTime(0.3, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.05); }
+        if(type === 'snare') { filter.type = 'highpass'; filter.frequency.value = 1000; gain.gain.setValueAtTime(0.8, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2); }
+        if(type === 'clap') { filter.type = 'bandpass'; filter.frequency.value = 1500; gain.gain.setValueAtTime(0.6, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15); }
+        if(type === 'crash') { filter.type = 'highpass'; filter.frequency.value = 4000; gain.gain.setValueAtTime(0.5, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 1.5); }
+        
+        noise.connect(filter); filter.connect(gain); gain.connect(gNode);
+        noise.start(time); return; 
+    }
+    
+    osc.connect(gain); gain.connect(gNode);
+    osc.start(time); osc.stop(time + 0.5);
+}
+
+function scheduler() {
+    while (nextNoteTime < audioCtx.currentTime + 0.1) {
+        const stepLen = 60 / document.getElementById('bpm').value / 4;
+        const stepInBar = globalStep % 16;
+        const currentBar = Math.floor(globalStep / 16) % numBars;
+
+        let activePatterns = playMode === 'pattern' ? [currentPattern] : patterns.filter(p => p.arrangerData[currentBar]).map(p => p.id);
+
+        activePatterns.forEach(patIdx => {
+            const pat = patterns[patIdx];
+            tracks.forEach(t => {
+                const trackData = pat.tracksData[t.id];
+                if (!trackData) return;
+
+                trackData.forEach((row, rIdx) => {
+                    const noteLength = row[stepInBar];
+                    
+                    if(noteLength > 0) {
+                        if(t.mode === 'synth') {
+                            const p = t.synthParams;
+                            const osc = audioCtx.createOscillator();
+                            const filter = audioCtx.createBiquadFilter();
+                            const g = audioCtx.createGain();
+                            
+                            osc.type = p.type;
+                            osc.frequency.setValueAtTime(scale[rIdx].f * p.oct, nextNoteTime);
+                            
+                            filter.type = 'lowpass';
+                            filter.frequency.setValueAtTime(p.cutoff, nextNoteTime);
+                            
+                            const holdTime = noteLength * stepLen;
+                            const actualAttack = Math.min(p.a, holdTime); 
+                            
+                            g.gain.setValueAtTime(0, nextNoteTime);
+                            g.gain.linearRampToValueAtTime(1, nextNoteTime + actualAttack); 
+                            g.gain.setValueAtTime(1, nextNoteTime + holdTime);              
+                            g.gain.exponentialRampToValueAtTime(0.001, nextNoteTime + holdTime + p.r); 
+                            
+                            osc.connect(filter); filter.connect(g); g.connect(t.gain);
+                            osc.start(nextNoteTime); 
+                            osc.stop(nextNoteTime + holdTime + p.r + 0.1);
+                        } else {
+                            playDrum(drumDefs[rIdx].id, nextNoteTime, t.gain);
+                        }
+                    }
+                    
+                    if (patIdx === currentPattern && playMode === 'pattern' && noteLength > 0) {
+                        const el = document.getElementById(`c-${t.id}-${rIdx}-${stepInBar}`);
+                        if(el) {
+                            setTimeout(() => { 
+                                el.classList.add('playing'); 
+                                setTimeout(() => el.classList.remove('playing'), 100); 
+                            }, (nextNoteTime - audioCtx.currentTime) * 1000);
+                        }
+                    }
+                });
+            });
+        });
+
+        if (playMode === 'song' && stepInBar === 0) {
+            setTimeout(() => {
+                document.querySelectorAll('.playlist-cell.playing').forEach(el => el.classList.remove('playing'));
+                patterns.forEach(p => { const el = document.getElementById(`pcell-${p.id}-${currentBar}`); if(el) el.classList.add('playing'); });
+            }, (nextNoteTime - audioCtx.currentTime) * 1000);
+        }
+
+        nextNoteTime += stepLen;
+        globalStep++;
+    }
+    timerID = setTimeout(scheduler, 25);
+}
+
+document.getElementById('play').onclick = () => {
+    initAudio();
+    if(isPlaying) return;
+    isPlaying = true;
+    globalStep = 0;
+    nextNoteTime = audioCtx.currentTime + 0.05;
+    scheduler();
+};
+
+document.getElementById('stop').onclick = () => {
+    isPlaying = false;
+    clearTimeout(timerID);
+    document.querySelectorAll('.playing').forEach(el => el.classList.remove('playing'));
+};
+</script>
+</body>
+</html>
